@@ -1,0 +1,137 @@
+---
+title: "V shape"
+author: "Leonardo Zepeda"
+date: "4/28/2020"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Recuperación en V 
+
+Ahora que el COVID-19 se confirma como una pandemia y que los mercados se han desplomado, algunos periodistas y comentarisas hablan acerca de una potencial recuperación abrupta de los mercados, comunmente denominada recuperación en forma de V, que indica que la recuperacion es tan abrupta como la caida. 
+
+De ser así: ¿ante las recientes caídas deberíamos esperar (estadísticamente) un brinco de regreso en los niveles de los mercados? 
+
+Las siguienes laminas analizan la frecuencia con que esto ha sucedido en el pasado.
+
+## Puntos a Analizar
+
+- El análisis se hace sobre el Indice DOW y sobre el S&P 500 desde 1980 hasta la fecha
+- Se analizan variaciones de niveles de los indices (precio) de un día vs el día anterior (volatilidad diaria)
+- Se forman 100 grupos de volatiliad similar para identificar patrones (Volatility Clustering)
+- Se concluye que no hay evidencia estadística, a ningun nivel de volatilidad diaria, de que exista una recuperación en V despues de una caida
+
+## DOW and S&P500
+
+Los datos provienen de Yahoo Finance, seleccionando la columna de precio ajustado. Estos datos corrigen las irregularidades generadas por eventos idiosncráticos de las firmas (dividendos, splits, etc) que no son movimientos del mercado. Así, los datos son comparables atraves del tiempo.
+
+Con ellos creamos nuevas columnas: rendimientos (cambio porcentual diario), precio rezagado y rendimiento rezagado. El rendimiento rezagado es simplemente el rendimiento del dia anterior. 
+
+Con lo anterior podemos inferir si existen recuperaciones en V de un dia para otro
+
+```{r, echo = FALSE}
+suppressPackageStartupMessages({
+     library(tidyverse)
+     library(tidyquant)
+ })
+DOW  <- tq_get("^DJI", get = "stock.prices", from = "2000-01-01")
+SP <- tq_get("^GSPC", get = "stock.prices", from = "2000-01-01")
+df <- bind_rows("DOW" = DOW,"SP"= SP, .id = "index") %>% 
+     select(date, index, adjusted) %>% 
+     rename(price = adjusted)
+df <- df %>% 
+     group_by(index) %>% 
+     mutate(lag_price = lag(price),
+            return = (price - lag_price)/ lag_price,
+            lag_return = lag(return)) %>%
+     na.omit()
+```
+
+## Niveles históricos
+
+Si observamos los niveles históricos podemos ver los cambios abruptos de precios en las crisis de 1987, del 2001 (Terrorismo en las Torres Gemelas) y de 2009 (Crisis SubPrime) así como la mas reciente por el COVID-19. El DOW está en niveles de Abril de 2017 y el S&P en niveles de Marzo de 2017.
+
+Tambien podemos observar que las tendencias son similares aunque las magnitudes sean distintas
+
+## Niveles Histroicos -Gráfica
+
+```{r echo=FALSE}
+
+ggplot(df, aes(date, price, colour=index)) + 
+    geom_line(data=df %>% filter(index =="DOW")) + 
+    geom_line(data=df %>% filter(index =="SP"), aes(y = price*10)) + 
+    scale_y_continuous(sec.axis= sec_axis(~./10, name="SP"))  
+
+  
+```
+
+## Variaciones Históricas
+
+Ahora bien en la siguiente grafica observamos que la mas grande variación de rendimientos es la que ocurre en 1987, que la siguiente ocurre en 2009 y la 3a mas grande es la actual.
+
+Observaremos que hay periodos de vilatilidad "similar" aunque en distintos periodos del tiempo. Si pudieramos agruparlas por rangos les llamariamos "grupos de volatilidad similar" (volatility clustering).
+
+## Variaciones Históricas -Grafica
+
+```{r, echo = FALSE }
+df %>%
+     ggplot(aes(x=date, y=return))+
+     geom_line(aes(col=index))
+```
+
+## Existe una Tendencia?
+
+Para observar recuperaciónes abruptas esperariamos que los niveles brincaran ante cada bajada (o algun número significativo de ellas). En una gráfica que reflejara los precios del dia anterior (eje x) contra sus precios del dia (eje y) deberíamos observar una tendencia en la que ante acentuados rendimientos bajos o negativos del dia anterior, corresponderían rendimientos altos del dia corriente. 
+
+En otras palabras, la nuve de puntos estaría en el cuadrante superior izquierdo de la gráfica (o cuando menos sobre la linea diagonal)
+
+## Tendencia? -Gráfica
+```{r, echo=FALSE }
+ df %>%
+    ggplot(aes(x=lag_return, y=return))+ 
+    geom_point(aes(col=index), alpha = 0.4)+
+    geom_abline(intercept = 0, slope = -1, lty = 3, col=3)+
+    xlim(-.25,.25)+
+    ylim(-.25,.25)
+```
+
+## 100 Grupos de Variación Similar
+
+Otra forma de buscar esta relación es agrupando las variaciones. Haciendo 100 grupos con la misma cantidad observaciones ordenadas en cada grupo, obtenemos 100 grupos de Variación Similar. Esto implica que el primer grupo contendrá el 1 porciento de los de los rendimientos rezagados mas pequeños, mientras que el ultimo grupo tengra el 1 porciento de los rendimientos rezagados más grandes. Para cada grupo luego calculamos la media de los rendimientos rezagados y la proporción de cada grupo que resultó en rendimientos positivos. 
+
+``` {r, echo=FALSE }
+N <- 100
+
+df_cuts <- df %>%
+            group_by(index) %>%
+            mutate(bin = cut(lag_return, 
+                                  quantile(lag_return, 
+                                           probs = seq(1 / N, 1 - 1 / N, 1 / N))) %>%
+                                  as.character()) %>%
+            group_by(index, bin) %>%
+            summarize(pos = mean(return > 0),
+                      mid = mean(lag_return)) 
+```
+
+## NO hay evidencia estadística de recuperaciones abruptas
+
+Como se observa en la siguiente grafica, los puntos rondan al rededor del 50% en la linea horizontal que es donde los rendimientos tienen la misma probabilidad de ser positivos o negativos. Para que las recuepraciones abruptas tuvieran signficancia estadistica deberíamos observar quelos puntos a la izquierda de la grafica estuvieran por encima de la linea horizontal trazada en el 50%. 
+
+## Evidencia -Gráfica
+```{r,  echo=FALSE}
+df_cuts %>% 
+  ggplot(aes(x=mid, y=pos))+
+  ylim(0.3,0.75)+
+  geom_point(aes(col = index), alpha=0.5, size=1)+
+  geom_hline(yintercept=0.50, col=2)+
+  geom_vline(xintercept=0.00, col=2)+
+  xlab("promedio por grupo")+
+  ylab("proporción positiva")
+```  
+
+
+
+

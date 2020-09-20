@@ -1,0 +1,436 @@
+---
+title: "V shape"
+author: "Leonardo Zepeda"
+date: "4/28/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Recuperación en V 
+
+Ahora que el COVID-19 se confirma como una pandemia y que los mercados se han desplomado, algunos periodistas y comentarisas hablan acerca de una potencial recuperación abrupta de los mercados, comunmente denominada recuperación en forma de V, que indica que la recuperacion es tan abrupta como la caida. 
+
+De ser así: ¿ante las recientes caídas deberíamos esperar (estadísticamente) un brinco de regreso en los niveles de los mercados? 
+
+Las siguienes laminas analizan la frecuencia con que esto ha sucedido en el pasado.
+
+## Puntos a Analizar
+
+- El análisis se hace sobre el Indice DOW y sobre el S&P 500 desde 1980 hasta la fecha
+- Se analizan variaciones de niveles de los indices (precio) de un día vs el día anterior (volatilidad diaria)
+- Se forman 100 grupos de volatiliad similar para identificar patrones (Volatility Clustering)
+- Se concluye que no hay evidencia estadística, a ningun nivel de volatilidad diaria, de que exista una recuperación en V despues de una caida
+
+## DOW and S&P500
+
+Los datos provienen de Yahoo Finance, seleccionando la columna de precio ajustado. Estos datos corrigen las irregularidades generadas por eventos idiosncráticos de las firmas (dividendos, splits, etc) que no son movimientos del mercado. Así, los datos son comparables atraves del tiempo.
+
+Con ellos creamos nuevas columnas: rendimientos (cambio porcentual diario), precio rezagado y rendimiento rezagado. El rendimiento rezagado es simplemente el rendimiento del dia anterior. 
+
+Con lo anterior podemos inferir si existen recuperaciones en V de un dia para otro
+
+```{r, echo = FALSE}
+suppressPackageStartupMessages({
+    library(tidyverse)
+    library(tidyquant)
+    library(tibbletime)
+    library(ggplot2)
+    library(lubridate)
+    library(matrixStats)
+    library(data.table)
+    library(dplyr)
+    library(xts)
+    library(zoo)
+    library(TTR)
+    library(quantmod)
+    library(highcharter)
+    library(timetk)
+    library(cowplot)
+ })
+```
+
+```{r, echo=FALSE}
+DOW  <- tq_get("^DJI", get = "stock.prices", from = "1980-01-01")
+SP <- tq_get("^GSPC", get = "stock.prices", from = "1980-01-01")
+```
+
+## Load and Transform Data
+Our objective is to find out critical statistical features to describe a cycle: how long a cycle last, what are the statistical feautures that preceed a fall,  a rise,  and what is critical to qualify those as sustained or or not sustained (fall or rise). 
+
+```{r, echo =FALSE}
+df <- bind_rows("DOW" = DOW,"SP"= SP, .id = "index") %>% 
+     select(date, index, adjusted) %>% 
+     rename(price = adjusted)
+```
+
+## A First Visual Analysis
+
+By observing historical levels we can notice dramatic changes against certain dramatic events. More relevant and dramatic are 1987 crisis, 9/11 in 2001 and the subprime crisis in 2009 and more recently the dramatic COVID-19 crisis in 2020. Is also noticeable that indices behave hightly correlated over time.
+
+### Graph 1 -Levels
+
+```{r echo=FALSE}
+
+ggplot(df, aes(date, price, colour=index)) + 
+    geom_line(data=df %>% filter(index =="DOW")) + 
+    geom_line(data=df %>% filter(index =="SP"), aes(y = price*10)) + 
+    scale_y_continuous(sec.axis= sec_axis(~./10, name="SP"))
+```
+
+
+## Leveling Perspective
+
+Price's magnitude distract the observer from the size of the variations. By considering price levels of 2020 (around 30,000 points for DOW) the observer may percieve a reduced importance of price variations in say, 1987 (when prices of DOW were one-thenth of 2020 levels). By using returns we can focus in the magnitude of the change avoiding the distraction of increasing price levels. In order to filter only "sustained" variations, the used returns are on weekly and monthly basis
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
+df <- df %>% 
+     group_by(index) %>% 
+     mutate(lag_price = lag(price,5),
+            returnw = (price - lag_price)/ lag_price,
+            lag_returnw = lag(returnw)) %>%
+     na.omit()
+
+df <- df %>% 
+     group_by(index) %>% 
+     mutate(lag_price = lag(price,30),
+            returnm = (price - lag_price)/ lag_price,
+            lag_returnm = lag(returnm)) %>%
+     na.omit()
+
+```
+
+### Graph 2 -Weekly Returns
+```{r, echo = FALSE }
+df %>%
+     ggplot(aes(x=date, y=returnw))+
+     geom_line(aes(col=index))+
+     geom_hline(yintercept=-.10, linetype="solid", 
+                color = "black", size=0.2)
+
+```
+
+### Graph 3 -Monthly Returns
+```{r, echo = FALSE }
+df %>%
+     ggplot(aes(x=date, y=returnm))+
+     geom_line(aes(col=index))+
+     geom_hline(yintercept=-.20, linetype="solid", 
+                color = "black", size=0.2)
+```
+
+## Analysis over Weekly Returns
+
+### Features of cyles
+
+There are several methods and criteria to identify cycles. Far from any teoretical stance and with practical  objectives, in this analysis we will define the start of a cycle with a threshold of a 10% or bigger weekly fall in index prices. As arbitrary as it seems, it provides 7 coincident falls (for both inidices) from 1985 to 2020 (see Graph 2)
+Critical dates:
+1987/10/19
+1998/08/31
+2001/09/17
+2008/10/07
+2011/08/08
+2015/08/25
+2020/02/27
+
+### Weekly Returns -Length of Cycles
+
+Cycle lenght is calculated by the number of days between one 10%+ fall and the next one in occurrence. Length cycle is representend in Graph 4. Please note that since the start date of series is arbitary, cycle one for both index are not consistent. Also please note that cycle 7 is just starting. Considering the latest we have 5 cycles to analyze. Graph 4 includes an horizontal line in 1081 days. This is the mean of cycle lenght of the 5 analyzed (complete) cycles. 
+
+```{r, echo=FALSE}
+df$cycle <- ifelse(df$date > as.Date("2020/02/27"),7, ifelse(df$date > as.Date("2015/08/25"),6 , ifelse(df$date  > as.Date("2011/08/08"), 5, ifelse(df$date  > as.Date("2008/10/07"), 4, ifelse(df$date > as.Date("2001/09/17"), 3, ifelse(df$date  > as.Date("1998/08/31"), 2,  1 ))))))
+                                                                                                        
+
+df <- df %>%
+  group_by(index, cycle) %>%
+  arrange(index,.by_group=TRUE) %>%
+  mutate(days =row_number())
+
+
+l <- as.data.frame(tapply(df$days,list(df$cycle,df$index), max))
+ l <- l %>%  mutate (cycle = rownames(l)) 
+ l <- l %>% select("cycle", "DOW", "SP")
+
+```
+
+### Graph 4 -Weeky Returns -Lenght of Cycles   
+
+```{r, echo=FALSE}
+l %>% 
+  gather("Type", "Value", -cycle) %>%
+  ggplot(aes(cycle, Value, fill= Type))+
+  geom_bar(position="dodge", stat= "identity")+
+  ylab("days")+
+  geom_hline(yintercept=mean(l[2:6,]$DOW), linetype="solid", 
+                color = "black", size=0.2)
+
+```
+
+### Weekly Returns -Descriptive statistics per cycle, 
+
+Besides lenght of the cycle, central tendency analysis may reveal another important features. Every cycle present diferent weekly features regarding mean returns, its volatitlity (standard deviation), its skewness, and qurtosis. All this features are represented in the following graph and tables. We will return to this features later (when it become useful for inference and intepretation).
+
+### Graph 5 -Weekly Returns -Distribution of returns
+```{r, echo=FALSE}
+ggplot() + geom_density(data=df, aes(x=returnw, group=cycle, color=cycle), alpha=0.8, adjust=5)+ theme_classic()
+```
+
+```{r, echo=FALSE, results= "asis"}
+s1 <- as.data.frame(tapply(df$returnw,list(df$cycle,df$index), mean)*10000)
+s2 <- as.data.frame(tapply(df$returnw,list(df$cycle,df$index), sd))
+s3 <- as.data.frame(tapply(df$returnw,list(df$cycle,df$index), skewness))
+s4 <- as.data.frame(tapply(df$returnw,list(df$cycle,df$index), kurtosis))
+DOWs <- cbind(l$DOW, s1$DOW, s2$DOW, s3$DOW, s4$DOW)
+rownames(DOWs) <- rownames(l)
+colnames(DOWs) <- c("days", "mean(bp)", "sd", "skewness", "kurosis")
+SPs <- cbind(l$SP, s1$SP, s2$SP, s3$SP, s4$SP)
+rownames(SPs) <- rownames(l)
+colnames(SPs) <- c("days", "mean(bp)", "sd", "skewness", "kurosis")
+
+DOWs <- as.data.frame(DOWs)
+SPs <- as.data.frame(SPs)
+
+```
+
+## Analysis over Monthly Returns
+
+In this analysis we will define the start of a cycle with a threshold of a 20% or bigger monthly fall in index prices. As arbitrary as it seems, it provides 4 coincident falls (for both inidices) from 1985 to 2020 (see Graph 3)
+Critical dates:
+1987/10/19
+2001/09/17
+2008/10/07
+2020/02/27
+
+### Monthly Returns -Length of Cycles
+
+Cycle lenght is calculated by the number of days between one 20%+ fall and the next one in occurrence. Length cycle is representend in Graph 6. Please note that since the start date of series is arbitary, cycle one for both index are not consistent. Also please note that cycle 7 is just starting. Considering the latest we have 3 cycles to analyze. Graph 6 includes an horizontal line in 2718 days. This is the mean of cycle lenght of the 3 analyzed (complete) cycles. 
+
+```{r, echo=FALSE}
+df$cyclem <- ifelse(df$date > as.Date("2020/02/27"),5, ifelse(df$date  > as.Date("2008/10/07"), 4, ifelse(df$date > as.Date("2001/09/17"), 3, ifelse(df$date  > as.Date("1987/10/19"), 2,  1 ))))
+                                                                                                      
+df <- df %>%
+  group_by(index, cyclem) %>%
+  arrange(index,.by_group=TRUE) %>%
+  mutate(daysm =row_number())
+
+
+lm <- as.data.frame(tapply(df$daysm,list(df$cyclem,df$index), max))
+ lm <- lm %>%  mutate (cyclem = rownames(lm)) 
+ lm <- lm %>% select("cyclem", "DOW", "SP")
+
+```
+### Graph 6 -Monthly Returns -Lenght of Cycles   
+
+```{r, echo=FALSE}
+lm %>% 
+  gather("Type", "Value", -cyclem) %>%
+  ggplot(aes(cyclem, Value, fill= Type))+
+  geom_bar(position="dodge", stat= "identity") +
+  ylab("daysm")+
+  geom_hline(yintercept=mean(lm[2:4,]$DOW), linetype="solid", 
+                color = "black", size=0.2)
+
+```
+
+
+### Monthly Returns -Descriptive statistics per cycle, 
+
+Besides lenght of the cycle, central tendency analysis may reveal another important features. Every cycle present diferent monthly features regarding mean returns, its volatitlity (standard deviation), its skewness, and qurtosis. All this features are represented in the following graph and tables. We will return to this features later (when it become useful for inference and intepretation).
+
+### Graph 7 -Distribution of returns
+```{r, echo=FALSE}
+ggplot() + geom_density(data=df, aes(x=returnm, group=cyclem, color=cyclem), alpha=0.8, adjust=5)+ theme_classic()
+```
+
+```{r, echo=FALSE, results= "asis"}
+s1m <- as.data.frame(tapply(df$returnm,list(df$cyclem,df$index), mean)*10000)
+s2m <- as.data.frame(tapply(df$returnm,list(df$cyclem,df$index), sd))
+s3m <- as.data.frame(tapply(df$returnm,list(df$cyclem,df$index), skewness))
+s4m <- as.data.frame(tapply(df$returnm,list(df$cyclem,df$index), kurtosis))
+DOWsm <- cbind(lm$DOW, s1m$DOW, s2m$DOW, s3m$DOW, s4m$DOW)
+rownames(DOWsm) <- rownames(lm)
+colnames(DOWsm) <- c("days", "mean(bp)", "sd", "skewness", "kurosis")
+SPsm <- cbind(lm$SP, s1m$SP, s2m$SP, s3m$SP, s4m$SP)
+rownames(SPsm) <- rownames(lm)
+colnames(SPsm) <- c("days", "mean(bp)", "sd", "skewness", "kurosis")
+
+DOWsm <- as.data.frame(DOWsm)
+SPsm <- as.data.frame(SPsm)
+
+```
+
+## Recovery 
+
+### Recovery Weekly Levels
+```{r, echo =FALSE}
+eDOW <- filter(df, index=="DOW" & days==1)
+eDOW <- eDOW[, c(3,9)]
+eDOW <- eDOW %>% select("cycle", "price")
+ 
+eSP <- filter(df, index=="SP" & days==1)
+eSP <- eSP[, c(3,9)]
+eSP <- eSP %>% select("cycle", "price")
+
+df <- df %>%
+  group_by(index, cycle) %>%
+  arrange(index,.by_group=TRUE) %>%
+  mutate( norm= price/price[days==1][1L])
+```
+
+```{r, echo=FALSE}
+
+p1 <- ggplot(df, aes(days, norm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cycle ==2)) + 
+         geom_line(data=df %>% filter(index== "SP" & cycle ==2)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+p2 <- ggplot(df, aes(days, norm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cycle ==3)) + 
+         geom_line(data=df %>% filter(index== "SP" & cycle ==3)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+p3 <- ggplot(df, aes(days, norm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cycle ==4)) + 
+         geom_line(data=df %>% filter(index== "SP" & cycle ==4)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+p4 <- ggplot(df, aes(days, norm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cycle ==5)) + 
+         geom_line(data=df %>% filter(index== "SP" & cycle ==5)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+p5 <- ggplot(df, aes(days, norm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cycle ==6)) + 
+         geom_line(data=df %>% filter(index== "SP" & cycle ==6)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+p6 <- ggplot(df, aes(days, norm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cycle ==7)) + 
+         geom_line(data=df %>% filter(index== "SP" & cycle ==7)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+
+plot_grid (p1, p2, p3, p4, p5, p6, 
+         labels = c("1998-2001", "2001-2008", "2008-2011", "2011-2015", "2015-2020","2020-TD"),
+         ncol = 2,nrow = 3)
+       
+```
+
+
+```{r, echo=FALSE}
+neg <- as.data.frame(tapply(df$norm<1 ,list(df$cycle,df$index), count))
+neg
+
+```
+
+## Recovery Monthly Levels
+
+```{r, echo =FALSE}
+eDOWm <- filter(df, index=="DOW" & daysm==1)
+eDOWm <- eDOWm[, c(3,11)]
+eDOWm <- eDOWm %>% select("cyclem", "price")
+ 
+eSPm <- filter(df, index=="SP" & daysm==1)
+eSPm <- eSPm[, c(3,11)]
+eSPm <- eSPm %>% select("cyclem", "price")
+
+df <- df %>%
+  group_by(index, cyclem) %>%
+  arrange(index,.by_group=TRUE) %>%
+  mutate( normm= price/price[daysm==1][1L])
+```
+
+```{r, echo=FALSE}
+
+p1m <- ggplot(df, aes(daysm, normm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cyclem ==2)) + 
+         geom_line(data=df %>% filter(index== "SP" & cyclem ==2)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+p2m <- ggplot(df, aes(daysm, normm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cyclem ==3)) + 
+         geom_line(data=df %>% filter(index== "SP" & cyclem ==3)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+p3m <- ggplot(df, aes(daysm, normm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cyclem ==4)) + 
+         geom_line(data=df %>% filter(index== "SP" & cyclem ==4)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+p4m <- ggplot(df, aes(daysm, normm, colour=index)) + 
+         geom_line(data=df %>% filter(index== "DOW" & cyclem ==5)) + 
+         geom_line(data=df %>% filter(index== "SP" & cyclem ==5)) +
+         geom_hline(yintercept=1.00 , linetype="solid", 
+                color = "black", size=0.2)
+
+plot_grid (p1m, p2m, p3m, p4m, 
+         labels = c("1987-2001", "2001-2008", "2008-2020","2020-TD"),
+         ncol = 2,nrow = 2)
+       
+```
+
+```{r, echo=FALSE}
+negm <- as.data.frame(tapply(df$normm<1 ,list(df$cyclem,df$index), count))
+negm
+
+```
+
+## Existe una Tendencia?
+
+Observaremos que hay periodos de volatilidad "similar" aunque en distintos periodos del tiempo. Si pudieramos agruparlas por rangos les llamariamos "grupos de volatilidad similar" (volatility clustering).
+
+Para observar recuperaciónes abruptas esperariamos que los niveles brincaran ante cada bajada (o algun número significativo de ellas). En una gráfica que reflejara los precios del dia anterior (eje x) contra sus precios del dia (eje y) deberíamos observar una tendencia en la que ante acentuados rendimientos bajos o negativos del dia anterior, corresponderían rendimientos altos del dia corriente. 
+
+En otras palabras, la nuve de puntos estaría en el cuadrante superior izquierdo de la gráfica (o cuando menos sobre la linea diagonal)
+
+## Tendencia? -Gráfica
+```{r, echo=FALSE }
+ df %>%
+    ggplot(aes(x=lag_returnm, y=returnm))+ 
+    geom_point(aes(col=index), alpha = 0.4)+
+    geom_abline(intercept = 0, slope = -1, lty = 3, col=3)+
+    xlim(-.25,.25)+
+    ylim(-.25,.25)
+```
+
+## 100 Grupos de Variación Similar
+
+Otra forma de buscar esta relación es agrupando las variaciones. Haciendo 100 grupos con la misma cantidad observaciones ordenadas en cada grupo, obtenemos 100 grupos de Variación Similar. Esto implica que el primer grupo contendrá el 1 porciento de los de los rendimientos rezagados mas pequeños, mientras que el ultimo grupo tengra el 1 porciento de los rendimientos rezagados más grandes. Para cada grupo luego calculamos la media de los rendimientos rezagados y la proporción de cada grupo que resultó en rendimientos positivos. 
+
+``` {r, echo=FALSE }
+N <- 100
+
+df_cuts <- df %>%
+            group_by(index) %>%
+            mutate(bin = cut(lag_returnm, 
+                                  quantile(lag_returnm, 
+                                           probs = seq(1 / N, 1 - 1 / N, 1 / N))) %>%
+                                  as.character()) %>%
+            group_by(index, bin) %>%
+            summarize(pos = mean(returnm > 0),
+                      mid = mean(lag_returnm)) 
+```
+
+## NO hay evidencia estadística de recuperaciones abruptas
+
+Como se observa en la siguiente grafica, los puntos rondan al rededor del 50% en la linea horizontal que es donde los rendimientos tienen la misma probabilidad de ser positivos o negativos. Para que las recuepraciones abruptas tuvieran signficancia estadistica deberíamos observar quelos puntos a la izquierda de la grafica estuvieran por encima de la linea horizontal trazada en el 50%. 
+
+## Evidencia -Gráfica
+```{r,  echo=FALSE}
+df_cuts %>% 
+  ggplot(aes(x=mid, y=pos))+
+  ylim(0.3,0.75)+
+  geom_point(aes(col = index), alpha=0.5, size=1)+
+  geom_hline(yintercept=0.50, col=2)+
+  geom_vline(xintercept=0.00, col=2)+
+  xlab("promedio por grupo")+
+  ylab("proporción positiva")
+```  
+
+
+
+
