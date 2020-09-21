@@ -120,6 +120,8 @@ df %>%
      ggplot(aes(x=date, y=returnm))+
      geom_line(aes(col=index))+
      geom_hline(yintercept=-.20, linetype="solid", 
+                color = "black", size=0.2)+
+     geom_hline(yintercept=.20, linetype="solid", 
                 color = "black", size=0.2)
 ```
 
@@ -127,8 +129,14 @@ df %>%
 
 ### Features of cyles
 
-There are several methods and criteria to identify cycles. Far from any teoretical stance and with practical  objectives, in this analysis we will define the start of a cycle with a threshold of a 10% or bigger weekly fall in index prices. As arbitrary as it seems, it provides 7 coincident falls (for both inidices) from 1985 to 2020 (see Graph 2)
-Critical dates:
+There are several methods and criteria to identify cycles. 
+Far from any teoretical stance and with practical  objectives, in this analysis we will define the start of a cycle with a threshold of a 10% or bigger dayly fall, coincident with a 10% weekly and a 10% monthly fall in index prices. As arbitrary as it seems, it provides 7 coincident falls (for both inidices) from 1985 to 2020 (see Graph 2)
+
+```{r, echo=FALSE}
+dfa <- subset(df, df$returnd <-.1 & df$returnw < -.1 & df$returnm < -.1)
+```
+
+Critical dates for DJI:
 1987/10/19
 1998/08/31
 2001/09/17
@@ -137,15 +145,27 @@ Critical dates:
 2015/08/25
 2020/02/27
 
+Critical dates for S&P:
+1987/10/19
+1998/08/31
+2001/09/21
+2002/07/22
+2008/10/07
+2009/02/23
+2011/08/08
+2015/08/25
+2020/02/27
+
+To identify a cycle we consider onlycritical dates coincidentfor both indexes than excludes: 2002/07/22 and 2009/02/23 from the S&P index.
+
+
 ### Weekly Returns -Length of Cycles
 
-Cycle lenght is calculated by the number of days between one 10%+ fall and the next one in occurrence. Length cycle is representend in Graph 4. Please note that since the start date of series is arbitary, cycle one for both index are not consistent. Also please note that cycle 7 is just starting. Considering the latest we have 5 cycles to analyze. Graph 4 includes an horizontal line in 1081 days. This is the mean of cycle lenght of the 5 analyzed (complete) cycles. 
+Cycle lenght is calculated by the number of days between one 10%+ (daily, weely and monthly) coincident fall and the next one in occurrence. Length cycle is representend in Graph 4. Please note that since the start date of series is arbitary, cycle one for both index are not consistent. Also please note that cycle 7 is just starting. Considering the latest we have 5 cycles to analyze. Graph 4 includes an horizontal line in 1081 days. This is the mean of cycle lenght of the 5 analyzed (complete) cycles. 
 
 ```{r, echo=FALSE}
 df$cycle <- ifelse(df$date > as.Date("2020/02/27"),7, ifelse(df$date > as.Date("2015/08/25"),6 , ifelse(df$date  > as.Date("2011/08/08"), 5, ifelse(df$date  > as.Date("2008/10/07"), 4, ifelse(df$date > as.Date("2001/09/17"), 3, ifelse(df$date  > as.Date("1998/08/31"), 2,  1 ))))))
-                                                                                                        
-
-df <- df %>%
+                                                                                            df <- df %>%
   group_by(index, cycle) %>%
   arrange(index,.by_group=TRUE) %>%
   mutate(days =row_number())
@@ -196,45 +216,9 @@ SPs <- as.data.frame(SPs)
 
 ```
 
-## Analysis over Monthly Returns
-
-In this analysis we will define the start of a cycle with a threshold of a 20% or bigger monthly fall in index prices. As arbitrary as it seems, it provides 4 coincident falls (for both inidices) from 1985 to 2020 (see Graph 3)
-Critical dates:
-1987/10/19
-2001/09/17
-2008/10/07
-2020/02/27
-
-### Monthly Returns -Length of Cycles
-
-Cycle lenght is calculated by the number of days between one 20%+ fall and the next one in occurrence. Length cycle is representend in Graph 6. Please note that since the start date of series is arbitary, cycle one for both index are not consistent. Also please note that cycle 7 is just starting. Considering the latest we have 3 cycles to analyze. Graph 6 includes an horizontal line in 2718 days. This is the mean of cycle lenght of the 3 analyzed (complete) cycles. 
-
-```{r, echo=FALSE}
-df$cyclem <- ifelse(df$date > as.Date("2020/02/27"),5, ifelse(df$date  > as.Date("2008/10/07"), 4, ifelse(df$date > as.Date("2001/09/17"), 3, ifelse(df$date  > as.Date("1987/10/19"), 2,  1 ))))
-                                                                                                      
-df <- df %>%
-  group_by(index, cyclem) %>%
-  arrange(index,.by_group=TRUE) %>%
-  mutate(daysm =row_number())
 
 
-lm <- as.data.frame(tapply(df$daysm,list(df$cyclem,df$index), max))
- lm <- lm %>%  mutate (cyclem = rownames(lm)) 
- lm <- lm %>% select("cyclem", "DOW", "SP")
-
-```
-### Graph 6 -Monthly Returns -Lenght of Cycles   
-
-```{r, echo=FALSE}
-lm %>% 
-  gather("Type", "Value", -cyclem) %>%
-  ggplot(aes(cyclem, Value, fill= Type))+
-  geom_bar(position="dodge", stat= "identity") +
-  ylab("daysm")+
-  geom_hline(yintercept=mean(lm[2:4,]$DOW), linetype="solid", 
-                color = "black", size=0.2)
-
-```
+### Monthly Returns 
 
 
 ### Monthly Returns -Descriptive statistics per cycle, 
@@ -243,19 +227,19 @@ Besides lenght of the cycle, central tendency analysis may reveal another import
 
 ### Graph 7 -Distribution of returns
 ```{r, echo=FALSE}
-ggplot() + geom_density(data=df, aes(x=returnm, group=cyclem, color=cyclem), alpha=0.8, adjust=5)+ theme_classic()
+ggplot() + geom_density(data=df, aes(x=returnm, group=cycle, color=cycle), alpha=0.8, adjust=5)+ theme_classic()
 ```
 
 ```{r, echo=FALSE, results= "asis"}
-s1m <- as.data.frame(tapply(df$returnm,list(df$cyclem,df$index), mean)*10000)
-s2m <- as.data.frame(tapply(df$returnm,list(df$cyclem,df$index), sd))
-s3m <- as.data.frame(tapply(df$returnm,list(df$cyclem,df$index), skewness))
-s4m <- as.data.frame(tapply(df$returnm,list(df$cyclem,df$index), kurtosis))
-DOWsm <- cbind(lm$DOW, s1m$DOW, s2m$DOW, s3m$DOW, s4m$DOW)
-rownames(DOWsm) <- rownames(lm)
+s1m <- as.data.frame(tapply(df$returnm,list(df$cycle,df$index), mean)*10000)
+s2m <- as.data.frame(tapply(df$returnm,list(df$cycle,df$index), sd))
+s3m <- as.data.frame(tapply(df$returnm,list(df$cycle,df$index), skewness))
+s4m <- as.data.frame(tapply(df$returnm,list(df$cycle,df$index), kurtosis))
+DOWsm <- cbind(l$DOW, s1m$DOW, s2m$DOW, s3m$DOW, s4m$DOW)
+rownames(DOWsm) <- rownames(l)
 colnames(DOWsm) <- c("days", "mean(bp)", "sd", "skewness", "kurosis")
-SPsm <- cbind(lm$SP, s1m$SP, s2m$SP, s3m$SP, s4m$SP)
-rownames(SPsm) <- rownames(lm)
+SPsm <- cbind(l$SP, s1m$SP, s2m$SP, s3m$SP, s4m$SP)
+rownames(SPsm) <- rownames(l)
 colnames(SPsm) <- c("days", "mean(bp)", "sd", "skewness", "kurosis")
 
 DOWsm <- as.data.frame(DOWsm)
