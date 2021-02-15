@@ -116,23 +116,11 @@ df %>%
                 color = "black", size=0.2)+
      scale_color_manual(values=c("#999999", "#CA0020", "#404040"))
 ```
-## Puntos a Analizar
+## Is there a trend for recovery ? 
 
-- El análisis se hace sobre el Indice DOW y sobre el S&P 500 desde 1980 hasta la fecha
-- Se analizan variaciones de niveles de los indices (precio) de un día vs el día anterior (volatilidad diaria)
-- Se forman 100 grupos de volatiliad similar para identificar patrones (Volatility Clustering)
-- Se concluye que no hay evidencia estadística, a ningun nivel de volatilidad diaria, de que exista una recuperación en V despues de una caida
+One of the interesting aspects to analyse is to find out if there is a noticeable trend for recovery after sensitive falls. First we will analyse global paterns of recovery by ploting returns against laged returns in weekly (7 days) and monthly basis (30 days). If immediate or abrupt recovery was a pattern, we should expect a more dense cloud of points in the higher-left corner of the graph, meaning that sensitive falls corresponds to sensitive recoverys. As observed in follogiwng graph neither for DJI or S&P 500 and weekly nor monthly data sugest that it would be the case. 
 
-
-## Existe una Tendencia?
-
-Observaremos que hay periodos de volatilidad "similar" aunque en distintos periodos del tiempo. Si pudieramos agruparlas por rangos les llamariamos "grupos de volatilidad similar" (volatility clustering).
-
-Para observar recuperaciónes abruptas esperariamos que los niveles brincaran ante cada bajada (o algun número significativo de ellas). En una gráfica que reflejara los precios del dia anterior (eje x) contra sus precios del dia (eje y) deberíamos observar una tendencia en la que ante acentuados rendimientos bajos o negativos del dia anterior, corresponderían rendimientos altos del dia corriente. 
-
-En otras palabras, la nuve de puntos estaría en el cuadrante superior izquierdo de la gráfica (o cuando menos sobre la linea diagonal)
-
-## Tendencia? -Gráfica
+##  Graph IV -Recovery Paterns
 ```{r, echo=FALSE }
 
  t1 <- 
@@ -159,9 +147,13 @@ plot_grid (t1, t2,
 
 ```
 
-## 100 Grupos de Variación Similar
+To validate the latest inference, we arange data in "equally-sized volatility clusters" regardless of the time of occurence. We arange data in 100 equally sized groups. We call them Similar Volatility Groups. As a result from that arrangement, the first group will contain 1% of the smallest lagged returns, while the latest group will contain the 1% largest lagged returns. Then for each group we calculate its mean and the positive portion of each group. 
 
-Otra forma de buscar esta relación es agrupando las variaciones. Haciendo 100 grupos con la misma cantidad observaciones ordenadas en cada grupo, obtenemos 100 grupos de Variación Similar. Esto implica que el primer grupo contendrá el 1 porciento de los de los rendimientos rezagados mas pequeños, mientras que el ultimo grupo tengra el 1 porciento de los rendimientos rezagados más grandes. Para cada grupo luego calculamos la media de los rendimientos rezagados y la proporción de cada grupo que resultó en rendimientos positivos. 
+By filtering only current positive returns, we observe that the groups with the smallest returns coorespond to negative mean lagged returns and the largest returns correspond to the largest positive lagged mean returns in asyntotical line arround the 0 mean. The latest complies for both weekly and monthly lagged returns. Up to now it might be confirmed the latest inference that there is not a noticeable trend for recovery after sensitive falls.
+
+Moreover, when ploting its density we find that there is sensitively more density of positive cases, within the 50% larger lagged returns. This may imply that the magnitude of the recovery is more often more close related with previous positive returns,  than with sensitive falls. 
+
+We will come later again with this global result of the data.
 
 ``` {r, echo=FALSE }
 N <- 100
@@ -173,8 +165,8 @@ df_cutsw <- df %>%
                                            probs = seq(1 / N, 1 - 1 / N, 1 / N))) %>%
                                   as.character()) %>%
             group_by(index, bin) %>%
-            summarize(pos = mean(returnw >0),
-                      mid = mean(lag_returnw )) 
+            summarize(pos = mean(returnw >0 ),
+                      mid = mean(lag_returnw)) 
 
 
 df_cutsm <- df %>%
@@ -189,28 +181,25 @@ df_cutsm <- df %>%
 
 ```
 
-## NO hay evidencia estadística de recuperaciones abruptas
 
-Como se observa en la siguiente grafica, los puntos rondan al rededor del 50% en la linea horizontal que es donde los rendimientos tienen la misma probabilidad de ser positivos o negativos. Para que las recuepraciones abruptas tuvieran signficancia estadistica deberíamos observar quelos puntos a la izquierda de la grafica estuvieran por encima de la linea horizontal trazada en el 50%. 
-
-## Evidencia -Gráfica
+## Graph V -Recovery Paterns in depth
 ```{r,  echo=FALSE}
 tqw <- 
   ggplot(df_cutsw, aes(x=pos, y=mid))+
   geom_point(aes(col = index), alpha=0.5, size=1)+
   geom_hline(yintercept=0.00, col=2)+
   geom_vline(xintercept=0.50, col=2)+
-  xlab("lag return group (+)")+
-  ylab("return group's mean")+
+  xlab("return group -positive portion")+
+  ylab("mean of lag returns")+
   scale_color_manual(values=c("#999999", "#CA0020", "#404040"))
 
 
 tqwd <- 
-  ggplot() + geom_density(data=df_cutsw, aes(x=pos, group=index, color=index), alpha=0, adjust=2)+
+  ggplot() + geom_density(data=df_cutsw, aes(x=pos, group=index, color=index, ..count..), alpha=0, adjust=1)+
   theme_classic()+
   geom_vline(xintercept=0.50, col=1)+
-  xlab("lag return group (+)")+
-  ylab("density")+
+  xlab("return group -positive portion")+
+  ylab("count")+
   scale_color_manual(values=c("#999999", "#CA0020", "#404040"))
 
 tqm <- 
@@ -218,16 +207,17 @@ tqm <-
   geom_point(aes(col = index), alpha=0.5, size=1)+
   geom_hline(yintercept=0.00, col=2)+
   geom_vline(xintercept=0.50, col=2)+
-  xlab("lag return group (+)")+
-  ylab("return group's mean")+
+  xlab("return group -positive portion")+
+  ylab("mean of lag returns")+
   scale_color_manual(values=c("#999999", "#CA0020", "#404040"))
 
 tqmd <- 
-  ggplot() + geom_density(data=df_cutsm, aes(x=pos, group=index, color=index), alpha=0, adjust=2)+
+  ggplot() + geom_density(data=df_cutsm, aes(x=pos, group=index, color=index,..count..), alpha=0, adjust=1)+
   theme_classic()+
   geom_vline(xintercept=0.50, col=1)+
-  xlab("lag return group (+)")+
-  ylab("density")+
+  xlab("return group -positive portion")+
+  ylab("count")+
+  stat_bin()+
   scale_color_manual(values=c("#999999", "#CA0020", "#404040"))
 
 plot_grid (tqw, tqm, tqwd, tqmd, 
