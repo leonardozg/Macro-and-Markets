@@ -11,9 +11,10 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ## Abstract
 
-By analyzing DOW and S&P indexes from 1980 to date, the author identifies 7 financial cycles and present common statistical features and parameters for each cycle. The analysis found that a cycle's length range from 764 to 1,777 days, averaging 20 basis points (bp) and 110 bp weekly and monthly returns respectively for DOW index; and 21 bp and 114 bp weekly and monthly returns respectively for S&P index. The analysis also found that cycle's total returns averaged 1.58 and 1.59 times it initial values for DOW and S&P indexes respectively, ranging from 1.38 to 1.81 times for both indexes. With the latest, and considering only statistical features, we could infer current cycle still have between 465 and 794 days left with the expectation to deliver at least 1.58 times its initial values, from which DOW has ran 79% of it already, and S&P has ran 83% of it already. The analysis also infers that negative returns will be the norm on a weekly and monthly basis and also that that there is not a noticeable trend for immediate recovery after sensitive falls. However, at the end of the cycle, positive shots will compensate incidental losses. 
+By analyzing DOW and S&P indexes from 1980 to date, the author identifies 7 financial cycles and present common statistical features and parameters for each cycle. The analysis found that a cycle's length range from 764 to 1,777 days, averaging 20 basis points (bp) and 112 bp weekly and monthly returns respectively for DOW index; and 19 bp and 114 bp weekly and monthly returns respectively for S&P index. The analysis also found that cycle's total returns averaged 1.58 and 1.59 times it initial values for DOW and S&P indexes respectively, ranging from 1.38 to 1.81 times for both indexes.  
 
-[Please also visit here](https://value-edge.wavium.co/recent-financial-cycles) 
+With the latest, and considering only statistical features, we could infer current cycle still have between 294 and 587 days left with the expectation to deliver at least 1.58 times its initial values, from which DOW has ran 91% of it already, and S&P has surpassed 2% above its peak already. The analysis also infers that negative returns will be the norm on a weekly and monthly basis and by now, this cycle present already more negative incidences than cycle's average, and also that that there is not a noticeable trend for immediate recovery after sensitive falls. However, at the end of the cycle, positive shots will compensate incidental losses.
+
 
 [Code is available here](https://github.com/leonardozg/Macro-and-Markets/blob/master/V%20Shape2.Rmd)
 
@@ -153,7 +154,7 @@ plot_grid (t1, t2,
 
 To validate the latest inference, we arrange data in "equally-sized volatility clusters" regardless of the time of occurrence. We arrange data in 100 equally sized groups. We call them Similar Volatility Groups. As a result from that arrangement, the first group will contain 1% of the smallest lagged returns, while the latest group will contain the 1% largest lagged returns. Then for each group we calculate its mean and the positive portion of each group. 
 
-By filtering only current positive returns, we observe that the groups with the smallest returns correspond to negative mean lagged returns and the largest returns correspond to the largest positive lagged mean returns in asymptotical line around the 0 mean. The latest complies for both weekly and monthly lagged returns. Up to now it might be confirmed that there is not a noticeable trend for recovery after sensitive falls.
+By filtering only current positive returns, we observe that the groups with the smallest returns correspond to negative mean lagged returns and the largest returns correspond to the largest positive lagged mean returns in asymptotycal line around the 0 mean. The latest complies for both weekly and monthly lagged returns. Up to now it might be confirmed that there is not a noticeable trend for recovery after sensitive falls.
 
 Moreover, when plotting its density we find that there is sensitively more density of positive cases, within the 50% larger lagged returns. This may imply that the magnitude of the recovery is more often related with previous positive returns, than with sensitive falls. A momentum argument as commonly referred by traders. 
 
@@ -395,9 +396,9 @@ ggplot(data=df, aes(x=returnw, group=cycle)) +
 
 Remembering statistics: if the skewness is between -0.5 and 0.5, the data are fairly symmetrical. If the skewness is between -1 and – 0.5 or between 0.5 and 1, the data are moderately skewed. If the skewness is less than -1 or greater than 1, the data are highly skewed.Negative values for the skewness indicate data that are skewed left and positive values for the skewness indicate data that are skewed right. By skewed left, we mean that the left tail (negative returns incidence) is long relative to the right tail (positive returns incidence). A positive mean with a negative skew, means negative incidence but not enough to deliver a negative mean, in other words, fewer cases are highly positive. In terms of kurtosis, what we should consider is how the incidence falls far from 0. When kurtosis is above 1, we may conclude most incidence falls near 0, but far from normal shape distribution.
 
-For DOW weekly performance, means for all cycles are positive (20.2 basis points on average) with a standard deviation below 4.35%. However the incidences delivers a sensitive negative skewness of 0.54 and kurtosis far above 1.0 in most cases with exception of cycle 2.
+For DOW weekly performance, means for all cycles are positive (20.2 basis points on average) with a standard deviation below 2.5%. However the incidences delivers a sensitive negative skewness of 0.55 and kurtosis far above 1.0 in most cases with exception of cycle 2.
 
-For S&P weekly performance, means for all cycles are positive (20.44 basis points on average) with a standard deviation below 3.9%. However the incidences delivers a sensitive  negative skewness of 0.68 and kurtosis far above 1.0 in most cases with exception (again) of cycle 2.
+For S&P weekly performance, means for all cycles are positive (19.96 basis points on average) with a standard deviation below 2.6%. However the incidences delivers a sensitive  negative skewness of 0.63 and kurtosis far above 1.0 in most cases with exception (again) of cycle 2.
 
 
 ```{r, echo=FALSE, results= "asis"}
@@ -436,9 +437,9 @@ ggplot(data=df, aes(x=returnm, group=cycle)) +
   geom_vline(xintercept=0, linetype="solid", color ="#CA0020" , size=0.2)
 ```
 
-For DOW monthly performance, means for all cycles are positive (111 basis points on average) with a standard deviation below 10.13%. However the incidences delivers a sensitive  negative skewness of 0.63 and kurtosis above 1.0 (peaked shape with more incidence close to 0) in 4 of the 7 cycles, and below 1.0 (flattened shape and more disperse incidence) in 3 of the seven cases.
+For DOW monthly performance, means for all cycles are positive (112 basis points on average) with a standard deviation below 5.5%. However the incidences delivers a sensitive  negative skewness of 0.68 and kurtosis above 1.0 (peaked shape with more incidence close to 0) in 4 of the 7 cycles, and below 1.0 (flattened shape and more disperse incidence) in 3 of the seven cases.
 
-For S&P monthly performance, means for all cycles are positive (114 basis points on average) with a standard deviation below 9.6%. However the incidences delivers a sensitive  negative skewness of 0.76 and kurtosis far above 1.0 (peaked shape with more incidence close to 0) in 5 of the 7 cycles, and below 1.0 (flattened shape and more disperse incidence) in 2 of the seven cases.
+For S&P monthly performance, means for all cycles are positive (114 basis points on average) with a standard deviation below 5.7%. However the incidences delivers a sensitive  negative skewness of 0.80 and kurtosis far above 1.0 (peaked shape with more incidence close to 0) in 5 of the 7 cycles, and below 1.0 (flattened shape and more disperse incidence) in 2 of the seven cases.
 
 
 ```{r, echo=FALSE, results= "asis"}
@@ -463,13 +464,13 @@ knitr::kable(SPsm, caption = "S&P Cycles Monthly statistical features")
 
 ### Negative Incidence
 
-As described in the previous section we must expect negative skew which means more negative hits in both weekly and monthly returns. With that in mind we try to find negative patterns.  
+As described in the previous section we must expect negative skew which means more negative hits (compared with its initial level) in both weekly and monthly returns. With that in mind we try to find negative patterns.  
 
 The following graph shows the number of days with negative returns and the portion those represent of the length cycle. 
 
 For the graph on the left, the horizontal lines are the cycles' average negative days for DOW (89.28 days) and S&P (118.14 days). Current cycle has had 59 and 52 negative days for DOW and S&P respectively, which means we could expect at least another 30 and 66 negative days respectively. 
 
-In terms of percentage, (the graph on the right) the horizontal lines are the cycles' average percentage of negative days for DOW (10.66%) and S&P (11.13%). However is clear also that the longer the cycle, the highest percentage of negative days (cycles above 700 days). Current cycle has had 22.86% and 20.15% of negative days for DOW and S&P respectively, which means we could expect a sensitive decrease of that percentage in the remaining length of the cycle, also aS seen and described in Graphs I and IV, negative returns tend to come together in "inner cycles" or momentum.
+In terms of percentage, (the graph on the right) the horizontal lines are the cycles' average percentage of negative days for DOW (9.12%) and S&P (9.76%). However is clear also that the longer the cycle, the highest percentage of negative days (cycles above 700 days). Current cycle has had 12.04% and 10.6% of negative days for DOW and S&P respectively, which means we could expect a sensitive decrease of that percentage in the remaining length of the cycle, also aS seen and described in Graphs I and IV, negative returns tend to come together in "inner cycles" or momentum.
 
 ### Graph X -Negative Incidence
 
@@ -510,7 +511,9 @@ plot_grid (negg, neggp,
 
 ### Conclusion
 
-The analysis found that a cycle's length range from 764 to 1,777 days, averaging 20 basis points (bp) and 110 bp weekly and monthly returns respectively for DOW index; and 21 bp and 114 bp weekly and monthly returns respectively for S&P index. The analysis also found that cycle's total returns averaged 1.58 and 1.59 times it initial values for DOW and S&P indexes respectively, ranging from 1.38 to 1.81 times for both indexes. With the latest, and considering only statistical features, we could infer current cycle still have between 465 and 794 days left with the expectation to deliver at least 1.58 times its initial values, from which DOW has ran 79% of it already, and S&P has ran 83% of it already. The analysis also infers that negative returns will be the norm on a weekly and monthly basis, and also that that there is not a noticeable trend for immediate recovery after sensitive falls. However, at the end of the cycle, positive shots will compensate incidental losses.  
+The analysis found that a cycle's length range from 714 to 1,777 days, averaging 20 basis points (bp) and 113 bp weekly and monthly returns respectively for DOW index; and 20 bp and 114 bp weekly and monthly returns respectively for S&P index. The analysis also found that cycle's total returns averaged 1.58 and 1.59 times it initial values for DOW and S&P indexes respectively, ranging from 1.38 to 1.81 times for both indexes. 
+
+With the latest, and considering only statistical features, we could infer current cycle still have between 294 and 587 days left with the expectation to deliver at least 1.58 times its initial values, from which DOW has ran 91% of it already, and S&P has surpassed 2% above its peak already. The analysis also infers that negative returns will be the norm on a weekly and monthly basis and by now, this cycle present already more negative incidences than cycle's average, and also that that there is not a noticeable trend for immediate recovery after sensitive falls. However, at the end of the cycle, positive shots will compensate incidental losses.  
 
 ```{r, echo=FALSE, warning=FALSE, message= FALSE}
 #Achieve <- tapply(df$norm, list(df$index, df$cycle), FUN=max)

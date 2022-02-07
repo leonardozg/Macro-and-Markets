@@ -4,7 +4,8 @@ username:
 account: rpubs
 server: rpubs.com
 hostUrl: rpubs.com
-appId: https://api.rpubs.com/api/v1/document/736453/e0ca3f188a434ea69329da7cf9558a8e
-bundleId: https://api.rpubs.com/api/v1/document/736453/e0ca3f188a434ea69329da7cf9558a8e
-url: http://rpubs.com/leonardozg/736453
-when: 1615346476.22032
+appId: https://api.rpubs.com/api/v1/document/862970/b1704a7b2ea544ada5444c1e689db669
+bundleId: https://api.rpubs.com/api/v1/document/862970/b1704a7b2ea544ada5444c1e689db669
+url: http://rpubs.com/publish/claim/862970/2d5e2306823a4b84ba9d0f8842ff44ad
+when: 1644197857.4813
+lastSyncTime: 1644197857.4813
